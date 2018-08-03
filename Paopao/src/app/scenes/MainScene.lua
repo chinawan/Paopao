@@ -9,7 +9,7 @@ function MainScene:ctor()
 	
 	self.world = self:getPhysicsWorld()
     self.world:setGravity(cc.p(0, 0))
-    -- self.world:setDebugDrawMask(cc.PhysicsWorld.DEBUGDRAW_ALL)
+    self.world:setDebugDrawMask(cc.PhysicsWorld.DEBUGDRAW_ALL)
 	math.newrandomseed()
 	self.backgroundLayer = display.newColorLayer(cc.c4f(0, 0, 0, 180))
 	self.backgroundLayer:addTo(self, 2)
@@ -58,9 +58,14 @@ function MainScene:startGame()
 		v:removeSelf()
 		v = nil 
 	end
+	for k,v in pairs(self.player.DaojuList) do
+		v:removeSelf()
+		v = nil 
+	end
 	self.player.spNode:setPosition(display.cx-400,display.cy)
 	self.player.ZuanList = {}
 	self.player.BullteList = {}
+	self.player.DaojuList = {}
 	self.player.scoreNum = 0
 	self.player.score:setScore(self.player.scoreNum)
 end
@@ -80,12 +85,47 @@ function MainScene:wanjiaDie(x,y)
 		v:stopAllActions()
 	end
 	ZUAN_SPEED_UP = 2
+	BULLET_SPEED_UP = 0.2
 	self.btn_start:setVisible(true)
 	if self.player.scoreNum > self.highest_scoreNum then
 		self.highest_scoreNum = self.player.scoreNum
 		cc.UserDefault:getInstance():setIntegerForKey("HighestScore", self.highest_scoreNum)
 	end
 	self.ScoreLabel1:setString(self.highest_scoreNum)
+end
+
+function MainScene:addCollision()
+    local function contactLogic(node)
+        if node:getName() == "bullet" then
+            local vA = node:getParent()
+            self.player:DelBullet(vA)
+        elseif node:getName() == "zuan" then
+        	local vB = node:getParent()
+        	self.player:reSetLabel(vB)
+        elseif node:getName() == "daoju" then
+        	print("------------getdaoju----------")
+        	local vC = node:getParent()
+        	self.player:DelDaoju(vC)
+        	BULLET_SPEED_UP = BULLET_SPEED_UP - 0.5
+        end
+    end
+
+    local function onContactBegin(contact)
+        local a = contact:getShapeA():getBody():getNode()
+        local b = contact:getShapeB():getBody():getNode()
+
+
+        contactLogic(a)
+        contactLogic(b)
+
+        return true
+    end
+    
+    local contactListener = cc.EventListenerPhysicsContact:create()
+    contactListener:registerScriptHandler(onContactBegin, cc.Handler.EVENT_PHYSICS_CONTACT_BEGIN)
+    -- contactListener:registerScriptHandler(onContactSeperate, cc.Handler.EVENT_PHYSICS_CONTACT_SEPERATE)
+    local eventDispatcher = cc.Director:getInstance():getEventDispatcher()
+    eventDispatcher:addEventListenerWithFixedPriority(contactListener, 1)
 end
 
 function MainScene:newCollision()

@@ -5,6 +5,7 @@
 local score = require("app.scenes.score")
 local bullet = require("app.scenes.bullet")
 local zuan = require("app.scenes.zuan")
+local daoju = require("app.scenes.daoju")
 local player = class("player", function ()
 	return display.newNode()
 end)
@@ -14,18 +15,22 @@ function player:ctor()
 	self.Zuandt = 0
 	self.hardImp = 0
 	self.scoreNum = 0
+	self.daojuNum = 0
 	self.BullteList = {}
 	self.ZuanList = {}
+	self.DaojuList = {}
 	self.spNode = display.newNode():addTo(self):pos(display.cx-400,display.cy)
     self.spBk  = display.newSprite("player.png"):addTo(self.spNode,1)
     local box = cc.PhysicsBody:createBox(cc.size(25,25), cc.PHYSICSBODY_MATERIAL_DEFAULT, cc.p(0,0))
     box:setDynamic(true)  
-    box:setCategoryBitmask(1)    
-    box:setContactTestBitmask(1)    
-    box:setCollisionBitmask(2)  
+    box:setCategoryBitmask(0x0011)
+    box:setContactTestBitmask(0x0011)
+    box:setCollisionBitmask(0x1000) 
     self.spNode:setPhysicsBody(box)
     self.spNode:setName("player")
 	self.score = score:new():addTo(self,5)
+
+	
 end
 
 function player:down(dt)
@@ -46,13 +51,20 @@ function player:down(dt)
 		self.scoreNum = self.scoreNum + 10
         self.score:setScore(self.scoreNum)
 		self.Zuandt  = 0
+		self.daojuNum = self.daojuNum + 1
+		if self.daojuNum == 1 then
+			self.daojuNum = 0
+			local daoju = daoju:new():addTo(self)
+			daoju:newDaoju(1100 ,math.random(100,540))
+			table.insert(self.DaojuList,daoju)
+		end
 	end
 	if self.hardImp > 30 then
 		self.hardImp = 0 
 		ZUAN_SPEED_UP = ZUAN_SPEED_UP - 0.5
 	end
 	self:updateBullet(dt)
-	-- self:updateLeft(dt)
+	self:updateDaoju(dt)
 end
 
 function player:GroupZuan()
@@ -105,6 +117,18 @@ function player:DelZuan( _zuan )
     end 
 end
 
+function player:DelDaoju(_daoju)
+	if not _daoju then  return end
+    for i = #self.DaojuList, 1, -1 do  
+        if self.DaojuList[i] ~= nil  and _daoju == self.DaojuList[i]  then  
+            self.DaojuList[i]:removeSelf()
+            self.DaojuList[i] = nil
+            table.remove(self.DaojuList, i)
+            return
+        end  
+    end 
+end
+
 function player:updateLeft(dt)
 	for k,v in pairs(self.ZuanList) do
 		if v.zuanNode:getPositionX() < -100 then
@@ -129,6 +153,17 @@ function player:updateBullet(dt)
 	end
 end
 
+function player:updateDaoju(dt)
+	for k,v in pairs(self.DaojuList) do
+		if v.daojuNode:getPositionX() <-100 then
+			self:DelDaoju(v)
+			v = nil
+		end
+		if v ~= nil then
+			v:DaojuUpdate(dt)
+		end
+	end
+end
 
 
 function player:AddBullet( newBullet)
@@ -144,6 +179,7 @@ function player:DelBullet( _Bullet )
     for i = #self.BullteList, 1, -1 do  
         if self.BullteList[i] ~= nil  and _Bullet == self.BullteList[i]  then  
             self.BullteList[i]:removeSelf()
+            self.BullteList[i] = nil
             table.remove(self.BullteList, i)
             return
         end  
